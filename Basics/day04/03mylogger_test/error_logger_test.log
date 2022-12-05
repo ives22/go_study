@@ -1,0 +1,6 @@
+[2022-11-13 21:47:10] [ERROR] [main.go:main:35] 这是一条error日志,name:小白,age:18
+[2022-11-13 21:47:10] [FATAL] [main.go:main:36] 这是一条fatal日志
+[2022-11-13 21:47:12] [ERROR] [main.go:main:35] 这是一条error日志,name:小白,age:18
+[2022-11-13 21:47:12] [FATAL] [main.go:main:36] 这是一条fatal日志
+[2022-11-13 21:47:14] [ERROR] [main.go:main:35] 这是一条error日志,name:小白,age:18
+[2022-11-13 21:47:14] [FATAL] [main.go:main:36] 这是一条fatal日志

@@ -1,0 +1,145 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"time"
+
+	// "github.com/influxdata/influxdb-client-go"
+	// _ "github.com/influxdata/influxdb1-client" // this is important because of the bug in go mod
+	// client "github.com/influxdata/influxdb1-client/v2"
+	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
+)
+
+// connInflux 初始化连接influxdb
+func connInflux() (influxdb2.Client, error) {
+	client := influxdb2.NewClient("http://120.24.222.91:8086", fmt.Sprintf("%s:%s", "admin", "admin@123"))
+	run, err := client.Ping(context.Background())
+	if run && err != nil {
+		fmt.Printf("influxdb is not running, err:%v\n", err)
+		return nil, err
+	}
+	return client, nil
+
+}
+
+// writesBlock 写入数据
+func writesBlock(client influxdb2.Client) {
+	writeAPI := client.WriteAPIBlocking("", "testdb")
+	// 设置tag
+	tags := map[string]string{"cpu": "ih-cpu"}
+	// 造一些模拟数据
+	fields := map[string]interface{}{
+		"idle":   101.1,
+		"system": 32.2,
+		"user":   82.7,
+	}
+	// 创建point
+	p := influxdb2.NewPoint("cpu_usage", tags, fields, time.Now())
+	// 写入到数据库中
+	err := writeAPI.WritePoint(context.Background(), p)
+	if err != nil {
+		fmt.Printf("write to influxdb failed, err:%v\n", err)
+		return
+	}
+	fmt.Println("insert success")
+}
+
+func queryDB(client influxdb2.Client, cmd string){
+	queryAPI := client.QueryAPI("")
+    // Get parser flux query result
+    result, err := queryAPI.Query(context.Background(), cmd)
+	// fmt.Println(result)
+	fmt.Println(err)
+    if err == nil {
+        // Use Next() to iterate over query result lines
+        for result.Next() {
+            // Observe when there is new grouping key producing new table
+            if result.TableChanged() {
+                fmt.Printf("table: %s\n", result.TableMetadata().String())
+				fmt.Println()
+            }
+            // read result
+            fmt.Printf("row: %s\n", result.Record().String())
+			fmt.Println()
+        }
+        if result.Err() != nil {
+            fmt.Printf("Query error: %s\n", result.Err().Error())
+        }
+    }
+
+}
+
+func connInfluxDB() {
+	cli := influxdb2.NewClient("http://120.24.222.91:8086", fmt.Sprintf("%s:%s", "admin", "admin@123"))
+	ok, err := cli.Ping(context.Background())
+	fmt.Println(ok, err)
+
+	writeAPI := cli.WriteAPIBlocking("", "testdb")
+
+	p := influxdb2.NewPoint("stat",
+		map[string]string{"unit": "temperature"},
+		map[string]interface{}{"avg": 24.5, "max": 45.0},
+		time.Now())
+	// write point immediately
+	// Write data
+	err = writeAPI.WritePoint(context.Background(), p)
+	if err != nil {
+		fmt.Printf("Write error: %s\n", err.Error())
+	}
+
+}
+
+func main() {
+	// cli := connInflux()
+	// fmt.Println(cli)
+	// writesPoints(cli)
+	// queryDB(cli, )
+
+	// connInfluxDB()
+	client, err := connInflux()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	// writesBlock(client)
+	cmd := `from(bucket:"testdb")|> range(start: -1h) |> filter(fn: (r) => r._measurement == "cpu_usage")`
+	// cmd := `select * from testdb.cpu_usage`
+	queryDB(client, cmd)
+}
+
+/*
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+docker run -d -p 8086:8086 \
+      -e DOCKER_INFLUXDB_INIT_MODE=setup \
+      -e DOCKER_INFLUXDB_INIT_USERNAME=admin \
+      -e DOCKER_INFLUXDB_INIT_PASSWORD=admin@123 \
+      -e DOCKER_INFLUXDB_INIT_ORG=my-org \
+      -e DOCKER_INFLUXDB_INIT_BUCKET=my-bucket \
+      -e DOCKER_INFLUXDB_INIT_RETENTION=1w \
+      -e DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=my-super-secret-auth-token \
+      influxdb:1.8.10
+
+
+	  docker run -d -p 8086:8086 \
+      -e DOCKER_INFLUXDB_INIT_MODE=setup \
+      -e DOCKER_INFLUXDB_INIT_USERNAME=admin \
+      -e DOCKER_INFLUXDB_INIT_PASSWORD=admin@123 \
+      -e DOCKER_INFLUXDB_INIT_ORG=my-org \
+      influxdb:1.8.10
+*/
